@@ -5,7 +5,7 @@ const TransactionItem = require('../models/transactionItem.model');
 const Product = require('../models/product.model');
 const Inventory = require('../models/inventory.model');
 
-async function createSalesTransaction({ userId, customerName, paymentMethod = 'Cash', items, discount}) {
+async function createSalesTransaction({ userId, customerName, paymentMethod,status, items, discount}) {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -59,7 +59,7 @@ async function createSalesTransaction({ userId, customerName, paymentMethod = 'C
       totalProfit: totalProfitAfterDiscount,
       discount,
       paymentMethod,
-      status: 'Completed'
+      status,
     });
 
     await salesTransaction.save({ session });

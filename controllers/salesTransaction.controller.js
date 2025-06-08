@@ -7,6 +7,7 @@ exports.createTransactionController = async (req, res) => {
       userId,
       customerName: req.body.customerName || '',
       paymentMethod: req.body.paymentMethod || 'Cash',
+      status: req.body.status || 'Completed',
       items: req.body.items,
       discount:req.body.discount
     });
