@@ -1,4 +1,4 @@
-const { createSalesTransaction } = require('../services/salesTransaction.service');
+const { createSalesTransaction,getAllSalesTransactions  } = require('../services/salesTransaction.service');
 
 exports.createTransactionController = async (req, res) => {
   try {
@@ -22,5 +22,15 @@ exports.createTransactionController = async (req, res) => {
       error: error.message
     });
     console.log(error);
+  }
+};
+
+exports.getAllTransactionsController = async (req, res) => {
+  try {
+    const transactions = await getAllSalesTransactions();
+    res.json({ data: transactions });
+  } catch (error) {
+    console.error('Error getting sales transactions:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };

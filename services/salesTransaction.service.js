@@ -89,6 +89,29 @@ async function createSalesTransaction({ userId, customerName, paymentMethod,stat
   }
 }
 
+async function getAllSalesTransactions() {
+  // Fetch all sales transactions with user populated
+  const transactions = await SalesTransaction.find()
+    .populate('user', 'name')   // only fetch user name
+    .sort({ createdAt: -1 });
+
+  // For each transaction, fetch related transaction items with product name populated
+  const detailedTransactions = await Promise.all(
+    transactions.map(async (tx) => {
+      const items = await TransactionItem.find({ transaction: tx._id })
+        .populate('product', 'name');
+
+      return {
+        ...tx.toObject(),
+        items,
+      };
+    })
+  );
+
+  return detailedTransactions;
+}
+
 module.exports = {
-  createSalesTransaction
+  createSalesTransaction,
+  getAllSalesTransactions
 };
