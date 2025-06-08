@@ -18,6 +18,10 @@ const salesTransactionSchema = new Schema({
         type: Number, 
         required: true 
     }, // calculated profit
+    discount: {
+        type: Number,
+        default: 0
+    },
     paymentMethod: { 
         type: String, 
         enum: ['Cash', 'Card', 'Online'], 

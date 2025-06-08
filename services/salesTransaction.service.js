@@ -1,18 +1,18 @@
+// services/salesTransaction.service.js
 const mongoose = require('mongoose');
 const SalesTransaction = require('../models/salesTransaction.model');
 const TransactionItem = require('../models/transactionItem.model');
 const Product = require('../models/product.model');
 const Inventory = require('../models/inventory.model');
 
-async function createSalesTransaction({ userId, customerName, paymentMethod = 'Cash', items }) {
+async function createSalesTransaction({ userId, customerName, paymentMethod = 'Cash', items, discount}) {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    let totalAmount = 0;
-    let totalProfit = 0;
+    let totalAmount = 0;    // total selling price before discount
+    let totalCost = 0;      // total cost price of items
 
-    // Step 1: Prepare item details
     const transactionItems = [];
 
     for (const item of items) {
@@ -32,36 +32,39 @@ async function createSalesTransaction({ userId, customerName, paymentMethod = 'C
       inventory.lastUpdated = new Date();
       await inventory.save({ session });
 
-      const sellingPrice = item.sellingPrice;
-      const costPrice = item.costPrice; // ✅ Use costPrice from frontend
-      const profit = item.profit ?? (sellingPrice - costPrice) * item.quantity; // Fallback if needed
+      totalAmount += item.sellingPrice * item.quantity;
+      totalCost += item.costPrice * item.quantity;
 
-      totalAmount += sellingPrice * item.quantity;
-      totalProfit += profit;
+      const profitBeforeDiscount = (item.sellingPrice - item.costPrice) * item.quantity;
 
       transactionItems.push({
         product: product._id,
         quantity: item.quantity,
-        sellingPrice,
-        costPrice,
-        profit,
-        size: item.size // Not in schema, but may be added to support size tracking
+        sellingPrice: item.sellingPrice,
+        costPrice: item.costPrice,
+        profit: profitBeforeDiscount,
+        size: item.size
       });
     }
 
-    // Step 2: Create SalesTransaction
+    // Calculate total profit after discount applied proportionally
+    // Profit after discount = totalAmount - discount - totalCost
+    const totalProfitAfterDiscount = (totalAmount - discount) - totalCost;
+
+    // Create SalesTransaction document
     const salesTransaction = new SalesTransaction({
       user: userId,
       customerName,
       totalAmount,
-      totalProfit,
+      totalProfit: totalProfitAfterDiscount,
+      discount,
       paymentMethod,
-      status: 'Completed',
+      status: 'Completed'
     });
 
     await salesTransaction.save({ session });
 
-    // Step 3: Save each TransactionItem
+    // Save each TransactionItem with ref to salesTransaction
     for (const item of transactionItems) {
       await TransactionItem.create([{
         transaction: salesTransaction._id,
@@ -70,7 +73,7 @@ async function createSalesTransaction({ userId, customerName, paymentMethod = 'C
         sellingPrice: item.sellingPrice,
         costPrice: item.costPrice,
         profit: item.profit,
-        size: item.size // ✅ This is the missing field
+        size: item.size
       }], { session });
     }
 
