@@ -99,7 +99,14 @@ async function getAllSalesTransactions() {
   const detailedTransactions = await Promise.all(
     transactions.map(async (tx) => {
       const items = await TransactionItem.find({ transaction: tx._id })
-        .populate('product', 'name');
+        .populate({
+          path: 'product',
+          select: 'name code category brand',
+          populate: [
+            { path: 'category', select: 'name' },
+            { path: 'brand', select: 'name' }
+          ]
+        });
 
       return {
         ...tx.toObject(),
