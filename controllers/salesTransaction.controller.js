@@ -1,4 +1,4 @@
-const { createSalesTransaction,getAllSalesTransactions  } = require('../services/salesTransaction.service');
+const { createSalesTransaction,getAllSalesTransactions,reverseTransaction,markTransactionCompleted  } = require('../services/salesTransaction.service');
 
 exports.createTransactionController = async (req, res) => {
   try {
@@ -34,3 +34,29 @@ exports.getAllTransactionsController = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+exports.reverseTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+    const result = await reverseTransaction(id, userId);
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.markTransactionCompleted = async (req, res) => {
+  try {
+    const updatedTransaction = await markTransactionCompleted(req.params.id);
+    res.status(200).json({
+      message: 'Transaction marked as completed successfully',
+      data: updatedTransaction
+    });
+  } catch (error) {
+    console.error('Error marking transaction as completed:', error);
+    res.status(error.status || 500).json({ message: error.message || 'Internal server error' });
+  }
+};
+

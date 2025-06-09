@@ -35,6 +35,13 @@ const salesTransactionSchema = new Schema({
     createdAt: { 
         type: Date, 
         default: Date.now 
+    },
+    reversedBy: { 
+        type: Schema.Types.ObjectId, 
+        ref: 'User' 
+    },
+    reversedAt: { 
+        type: Date 
     }
 }, { timestamps: true });
 
