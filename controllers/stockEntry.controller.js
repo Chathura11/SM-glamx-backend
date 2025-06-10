@@ -1,4 +1,4 @@
-const { createStockEntry,getAllStockEntries,getAllStockEntryItems,getFIFOStockItem } = require('../services/stockEntry.service');
+const { createStockEntry,getAllStockEntries,getAllStockEntryItems,getFIFOStockItem,getAllStockEntriesDetailed} = require('../services/stockEntry.service');
 
 exports.CreateStockEntry = async (req, res) => {
     try {
@@ -45,4 +45,13 @@ exports.GetAllStockEntries = async (req, res) => {
       res.status(400).json({ error: err.message });
     }
   };
+
+  exports.getAllStockEntriesDetailed = async (req, res) =>{
+    try {
+      const data = await getAllStockEntriesDetailed();
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
 

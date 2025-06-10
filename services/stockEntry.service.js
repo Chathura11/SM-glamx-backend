@@ -65,6 +65,29 @@ exports.createStockEntry = async (data, user) => {
     return stockEntry._id;
   };
   
+  exports.getAllStockEntriesDetailed = async ()=> {
+    // Find all stock entries
+    const entries = await StockEntry.find()
+      .populate('supplier', 'name') // Populate supplier name only
+      .populate('createdBy', 'username') // Populate creator username
+      .lean();
+  
+    // For each entry, find related StockEntryItems and populate product info
+    const entriesWithItems = await Promise.all(
+      entries.map(async (entry) => {
+        const items = await StockEntryItem.find({ stockEntry: entry._id })
+          .populate('product', 'name')
+          .lean();
+  
+        return {
+          ...entry,
+          items,
+        };
+      })
+    );
+  
+    return entriesWithItems;
+  }
 
 
 exports.getAllStockEntries = async () => {
