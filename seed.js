@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const Role = require('./models/roles.model');
 const {User} = require('./models/users.model');
 const Permission = require('./models/permissions.model');
-const mongoURI = 'mongodb+srv://chathuraasela11:sGB9HIPE05B1qSF9@cluster0.ukwnint.mongodb.net/glamx_db?retryWrites=true&w=majority&appName=Cluster0';
+const mongoURI = process.env.MONGODB_URL;
 const bcrypt = require('bcrypt');
 
 async function seedDatabase() {
