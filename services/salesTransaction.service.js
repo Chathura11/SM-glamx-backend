@@ -181,10 +181,30 @@ async function markTransactionCompleted (transactionId){
   return transaction;
 };
 
+async function getTransactionWithItems(transactionId){
+  const transaction = await SalesTransaction.findById(transactionId)
+    .populate('user', 'username') // Populate user who did the sale
+    .lean();
+
+  const items = await TransactionItem.find({ transaction: transactionId })
+    .populate({
+      path: 'product',
+      select: 'name brand category',
+      populate: [
+        { path: 'brand', select: 'name' },
+        { path: 'category', select: 'name' }
+      ]
+    })
+    .lean();
+
+  return { transaction, items };
+};
+
 
 module.exports = {
   createSalesTransaction,
   getAllSalesTransactions,
   reverseTransaction,
-  markTransactionCompleted
+  markTransactionCompleted,
+  getTransactionWithItems 
 };

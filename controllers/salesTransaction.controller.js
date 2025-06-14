@@ -1,4 +1,4 @@
-const { createSalesTransaction,getAllSalesTransactions,reverseTransaction,markTransactionCompleted  } = require('../services/salesTransaction.service');
+const { createSalesTransaction,getAllSalesTransactions,reverseTransaction,markTransactionCompleted,getTransactionWithItems } = require('../services/salesTransaction.service');
 
 exports.createTransactionController = async (req, res) => {
   try {
@@ -57,6 +57,22 @@ exports.markTransactionCompleted = async (req, res) => {
   } catch (error) {
     console.error('Error marking transaction as completed:', error);
     res.status(error.status || 500).json({ message: error.message || 'Internal server error' });
+  }
+};
+
+exports.getSalesTransactionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await getTransactionWithItems(id);
+
+    if (!result.transaction) {
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching sales transaction:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
