@@ -20,32 +20,46 @@ exports.buyStock = async (amount, session = null) => {
   }], { session });
 };
 
-exports.recordSale = async ({ salePrice, costPrice,customerName }) => {
-    const cash = await Account.findOne({ name: 'Cash' });
-    const inventory = await Account.findOne({ name: 'Inventory' });
-    const cogs = await Account.findOne({ name: 'COGS' });
-    const sales = await Account.findOne({ name: 'Sales Revenue' });
-  
+exports.recordSale = async ({ salePrice, costPrice, customerName }) => {
+  const cash = await Account.findOne({ name: 'Cash' });
+  const inventory = await Account.findOne({ name: 'Inventory' });
+  const cogs = await Account.findOne({ name: 'COGS' });
+  const sales = await Account.findOne({ name: 'Sales Revenue' });
+
+  const journalEntries = [];
+
+  if (salePrice > 0) {
+    // Regular Sale
     cash.balance += salePrice;
     sales.balance += salePrice;
-    inventory.balance -= costPrice;
-    cogs.balance += costPrice;
-  
-    await Promise.all([cash.save(), sales.save(), inventory.save(), cogs.save()]);
-  
-    return JournalEntry.insertMany([
-      {
-        description: `Product Sale Revenue - ${customerName}`,
-        debit: { account: cash._id, amount: salePrice },
-        credit: { account: sales._id, amount: salePrice }
-      },
-      {
-        description: `Product Cost(COGS) - ${customerName}`,
-        debit: { account: cogs._id, amount: costPrice },
-        credit: { account: inventory._id, amount: costPrice }
-      }
-    ]);
-  };
+
+    journalEntries.push({
+      description: `Product Sale Revenue - ${customerName}`,
+      debit: { account: cash._id, amount: salePrice },
+      credit: { account: sales._id, amount: salePrice }
+    });
+  }
+
+  // Always adjust COGS and Inventory
+  inventory.balance -= costPrice;
+  cogs.balance += costPrice;
+
+  journalEntries.push({
+    description: salePrice > 0 
+      ? `Product Cost (COGS) - ${customerName}` 
+      : `Free Giveaway - ${customerName}`,
+    debit: { account: cogs._id, amount: costPrice },
+    credit: { account: inventory._id, amount: costPrice }
+  });
+
+  // Save all account updates
+  const updates = [inventory.save(), cogs.save()];
+  if (salePrice > 0) updates.push(cash.save(), sales.save());
+  await Promise.all(updates);
+
+  // Insert journal entries
+  return JournalEntry.insertMany(journalEntries);
+};
 
 
   exports.addMoneyAsset = async ({ amount, source, target,description}) => {

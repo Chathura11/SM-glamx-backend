@@ -80,9 +80,11 @@ async function createSalesTransaction({ userId, customerName, paymentMethod,stat
       }], { session });
     }
 
+    const saleAmount = status === 'Free' ? 0 : (totalAmount - discount);
+
     // Apply journal accounting entry
     await accountService.recordSale({
-      salePrice: totalAmount - discount,
+      salePrice: saleAmount,
       costPrice: totalCost,
       customerName:customerName
     });
@@ -138,6 +140,8 @@ async function reverseTransaction(transactionId, userId) {
     if (!transaction) throw new Error('Transaction not found');
     if (transaction.status === 'Cancelled') throw new Error('Transaction already cancelled');
 
+    const totalSale =transaction.status ==='Free' ? 0 : transaction.totalAmount;
+
     // Mark as cancelled
     transaction.status = 'Cancelled';
     transaction.reversedBy = userId;
@@ -163,8 +167,6 @@ async function reverseTransaction(transactionId, userId) {
       totalCost += item.costPrice * item.quantity;
     }
 
-    const totalSale = transaction.totalAmount;
-
     // === Account reversal ===
     const cash = await Account.findOne({ name: 'Cash' }).session(session);
     const sales = await Account.findOne({ name: 'Sales Revenue' }).session(session);
@@ -175,32 +177,37 @@ async function reverseTransaction(transactionId, userId) {
       throw new Error('One or more required accounts not found');
     }
 
-    // Reverse balances
-    cash.balance -= totalSale;
-    sales.balance -= totalSale;
-    inventoryAcc.balance += totalCost;
-    cogs.balance -= totalCost;
+    const journalEntries = [];
 
-    await Promise.all([
-      cash.save({ session }),
-      sales.save({ session }),
-      inventoryAcc.save({ session }),
-      cogs.save({ session })
-    ]);
+    // If it was a paid sale
+    if (totalSale > 0) {
+      cash.balance -= totalSale;
+      sales.balance -= totalSale;
 
-    // Create reversal journal entries
-    await JournalEntry.insertMany([
-      {
+      journalEntries.push({
         description: `Reversal - Sale Refund for transaction ${transactionId}`,
         debit: { account: sales._id, amount: totalSale },
         credit: { account: cash._id, amount: totalSale }
-      },
-      {
-        description: `Reversal - Restore Inventory for transaction ${transactionId}`,
-        debit: { account: inventoryAcc._id, amount: totalCost },
-        credit: { account: cogs._id, amount: totalCost }
-      }
-    ], { session });
+      });
+    }
+
+    // Always reverse COGS and Inventory
+    inventoryAcc.balance += totalCost;
+    cogs.balance -= totalCost;
+
+    journalEntries.push({
+      description: totalSale > 0
+        ? `Reversal - Restore Inventory for transaction ${transactionId}`
+        : `Reversal - Free Sale Return ${transactionId}`,
+      debit: { account: inventoryAcc._id, amount: totalCost },
+      credit: { account: cogs._id, amount: totalCost }
+    });
+
+    const updates = [inventoryAcc.save({ session }), cogs.save({ session })];
+    if (totalSale > 0) updates.push(cash.save({ session }), sales.save({ session }));
+    await Promise.all(updates);
+
+    await JournalEntry.insertMany(journalEntries, { session });
 
     await session.commitTransaction();
     session.endSession();
