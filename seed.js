@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Role = require('./models/roles.model');
 const {User} = require('./models/users.model');
 const Permission = require('./models/permissions.model');
+const Account = require('./models/account.model');
 const mongoURI = process.env.MONGODB_URL;
 const bcrypt = require('bcrypt');
 
@@ -15,6 +16,7 @@ async function seedDatabase() {
     await Permission.deleteMany({});
     await Role.deleteMany({});
     await User.deleteMany({});
+    await Account.deleteMany({});
 
     // Define permissions data
     const permissionsData = [
@@ -67,6 +69,17 @@ async function seedDatabase() {
     });
 
     await superAdminUser.save();
+
+    //adding accounts
+    await Account.insertMany([
+      { name: 'Cash', type: 'Asset', balance: 0 },
+      { name: 'Inventory', type: 'Asset', balance: 0 },
+      { name: 'Sales Revenue', type: 'Revenue', balance: 0 },
+      { name: 'COGS', type: 'Expense', balance: 0 },
+      { name: "Owner's Equity", type: 'Liability', balance: 0 },
+      { name: 'Salary Expense', type: 'Expense', balance: 0 },
+      { name: 'Additional Expense', type: 'Expense', balance: 0 }
+    ]);
 
     console.log('Database seeded successfully.');
   } catch (error) {

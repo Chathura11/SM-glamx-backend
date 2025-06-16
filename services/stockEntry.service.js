@@ -2,6 +2,7 @@ const StockEntry = require('../models/stockEntry.model');
 const StockEntryItem = require('../models/stockEntryItem.model');
 const Inventory = require('../models/inventory.model');
 const Product = require('../models/product.model');
+const accountService = require('./account.service.js'); 
 
 exports.createStockEntry = async (data, user) => {
     const { supplier, invoiceNumber, items, location } = data;
@@ -61,6 +62,9 @@ exports.createStockEntry = async (data, user) => {
   
     stockEntry.totalAmount = totalAmount;
     await stockEntry.save();
+
+    // ===>> ACCOUNTING ENTRY HERE
+    await accountService.buyStock(totalAmount, session); // passing session to keep consistency
   
     return stockEntry._id;
   };

@@ -4,6 +4,9 @@ const SalesTransaction = require('../models/salesTransaction.model');
 const TransactionItem = require('../models/transactionItem.model');
 const Product = require('../models/product.model');
 const Inventory = require('../models/inventory.model');
+const accountService = require('./account.service.js'); 
+const JournalEntry = require('../models/journal.model');
+const Account = require('../models/account.model');
 
 async function createSalesTransaction({ userId, customerName, paymentMethod,status, items, discount}) {
   const session = await mongoose.startSession();
@@ -77,6 +80,13 @@ async function createSalesTransaction({ userId, customerName, paymentMethod,stat
       }], { session });
     }
 
+    // Apply journal accounting entry
+    await accountService.recordSale({
+      salePrice: totalAmount - discount,
+      costPrice: totalCost,
+      customerName:customerName
+    });
+
     await session.commitTransaction();
     session.endSession();
 
@@ -136,6 +146,7 @@ async function reverseTransaction(transactionId, userId) {
 
     const items = await TransactionItem.find({ transaction: transactionId }).session(session);
 
+    let totalCost = 0;
     for (const item of items) {
       const inventory = await Inventory.findOne({ product: item.product }).session(session);
       const sizeEntry = inventory.sizes.find(s => s.size === item.size);
@@ -148,7 +159,48 @@ async function reverseTransaction(transactionId, userId) {
 
       inventory.lastUpdated = new Date();
       await inventory.save({ session });
+
+      totalCost += item.costPrice * item.quantity;
     }
+
+    const totalSale = transaction.totalAmount;
+
+    // === Account reversal ===
+    const cash = await Account.findOne({ name: 'Cash' }).session(session);
+    const sales = await Account.findOne({ name: 'Sales Revenue' }).session(session);
+    const inventoryAcc = await Account.findOne({ name: 'Inventory' }).session(session);
+    const cogs = await Account.findOne({ name: 'COGS' }).session(session);
+
+    if (!cash || !sales || !inventoryAcc || !cogs) {
+      throw new Error('One or more required accounts not found');
+    }
+
+    // Reverse balances
+    cash.balance -= totalSale;
+    sales.balance -= totalSale;
+    inventoryAcc.balance += totalCost;
+    cogs.balance -= totalCost;
+
+    await Promise.all([
+      cash.save({ session }),
+      sales.save({ session }),
+      inventoryAcc.save({ session }),
+      cogs.save({ session })
+    ]);
+
+    // Create reversal journal entries
+    await JournalEntry.insertMany([
+      {
+        description: `Reversal - Sale Refund for transaction ${transactionId}`,
+        debit: { account: sales._id, amount: totalSale },
+        credit: { account: cash._id, amount: totalSale }
+      },
+      {
+        description: `Reversal - Restore Inventory for transaction ${transactionId}`,
+        debit: { account: inventoryAcc._id, amount: totalCost },
+        credit: { account: cogs._id, amount: totalCost }
+      }
+    ], { session });
 
     await session.commitTransaction();
     session.endSession();
