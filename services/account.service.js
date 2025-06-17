@@ -78,8 +78,8 @@ exports.recordSale = async ({ salePrice, costPrice, customerName }) => {
   
     return await JournalEntry.create({
       description,
-      debit: { account: targetAcc._id, numericAmount },
-      credit: { account: sourceAcc._id, numericAmount }
+      debit: { account: targetAcc._id, amount:numericAmount },
+      credit: { account: sourceAcc._id, amount:numericAmount }
     });
   };
 
@@ -100,8 +100,8 @@ exports.recordSale = async ({ salePrice, costPrice, customerName }) => {
   
     return await JournalEntry.create({
       description: description || `Expense - ${category}`,
-      debit: { account: expenseAcc._id, numericAmount },
-      credit: { account: paidFromAcc._id, numericAmount }
+      debit: { account: expenseAcc._id, amount:numericAmount },
+      credit: { account: paidFromAcc._id, amount:numericAmount }
     });
   };
 
