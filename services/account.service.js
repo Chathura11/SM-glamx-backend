@@ -63,39 +63,45 @@ exports.recordSale = async ({ salePrice, costPrice, customerName }) => {
 
 
   exports.addMoneyAsset = async ({ amount, source, target,description}) => {
+
+    const numericAmount = Number(amount); // ✅ convert to number
+
     const sourceAcc = await Account.findOne({ name: source });
     const targetAcc = await Account.findOne({ name: target });
   
     if (!sourceAcc || !targetAcc) throw new Error('Invalid account name');
   
-    sourceAcc.balance += amount; // Equity grows
-    targetAcc.balance += amount; // Cash grows
+    sourceAcc.balance += numericAmount; // Equity grows
+    targetAcc.balance += numericAmount; // Cash grows
   
     await Promise.all([sourceAcc.save(), targetAcc.save()]);
   
     return await JournalEntry.create({
       description,
-      debit: { account: targetAcc._id, amount },
-      credit: { account: sourceAcc._id, amount }
+      debit: { account: targetAcc._id, numericAmount },
+      credit: { account: sourceAcc._id, numericAmount }
     });
   };
 
 
   exports.addExpense = async ({ amount, category, paidFrom, description }) => {
+
+    const numericAmount = Number(amount); // ✅ convert to number
+
     const expenseAcc = await Account.findOne({ name: category });
     const paidFromAcc = await Account.findOne({ name: paidFrom });
   
     if (!expenseAcc || !paidFromAcc) throw new Error('Invalid account name');
   
-    expenseAcc.balance += amount; // Expense increases
-    paidFromAcc.balance -= amount; // Asset (Cash/Bank) decreases
+    expenseAcc.balance += numericAmount; // Expense increases
+    paidFromAcc.balance -= numericAmount; // Asset (Cash/Bank) decreases
   
     await Promise.all([expenseAcc.save(), paidFromAcc.save()]);
   
     return await JournalEntry.create({
       description: description || `Expense - ${category}`,
-      debit: { account: expenseAcc._id, amount },
-      credit: { account: paidFromAcc._id, amount }
+      debit: { account: expenseAcc._id, numericAmount },
+      credit: { account: paidFromAcc._id, numericAmount }
     });
   };
 
