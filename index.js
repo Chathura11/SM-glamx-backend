@@ -32,6 +32,7 @@ const productRouter = require('./routes/product.routes');
 const discountRouter = require('./routes/discount.routes');
 const stockRouter = require('./routes/stock.routes');
 const salesRouter = require('./routes/sales.routes');
+const salesReturnRouter = require('./routes/salesReturn.routes');
 const inventoryRouter = require('./routes/inventory.routes');
 const accountRouter = require('./routes/account.routes');
 
@@ -49,6 +50,7 @@ app.use('/api/stocks',stockRouter);
 app.use('/api/sales',salesRouter);
 app.use('/api/inventories', inventoryRouter);
 app.use('/api/accounts',accountRouter);
+app.use('/api/sales-return',salesReturnRouter);
 
 app.listen(PORT,()=>{
     console.log(`Server is up and run on port ${PORT}`);
